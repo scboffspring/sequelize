@@ -80,6 +80,8 @@ describe(Support.getTestDialectTeaser('Model'), function() {
     it('should be able to unscope', function () {
       expect(Company.scope(null).$scope).to.be.empty;
       expect(Company.unscoped().$scope).to.be.empty;
+      // Yes, being unscoped is also a scope - this prevents inject defaultScope, when including a scoped model, see #4663
+      expect(Company.unscoped().scoped).to.be.ok;
     });
 
     it('should be able to merge scopes', function() {
@@ -217,6 +219,20 @@ describe(Support.getTestDialectTeaser('Model'), function() {
         include: [{ model: Project }]
       });
     });
+
+    it('works with exclude and include attributes', function () {
+      Company.addScope('newIncludeScope', {
+        attributes: {
+          include: ['foobar'],
+          exclude: ['createdAt']
+        }
+      });
+
+      expect(Company.scope('newIncludeScope').$scope).to.deep.equal({
+        attributes: ['id', 'updatedAt', 'foobar']
+      });
+    });
+
   });
 
   describe('$injectScope', function () {
@@ -314,6 +330,49 @@ describe(Support.getTestDialectTeaser('Model'), function() {
       expect(options.include).to.have.length(2);
       expect(options.include[0]).to.deep.equal({ model: User, where: { something: true }});
       expect(options.include[1]).to.deep.equal({ model: Project, where: { something: false }});
+    });
+
+    describe('include all', function () {
+      it('scope with all', function () {
+        var scope = {
+          include: [
+            { all: true }
+          ]
+        };
+
+        var options = {
+          include: [
+            { model: User, where: { something: true }}
+          ]
+        };
+
+        current.Model.$injectScope(scope, options);
+
+        expect(options.include).to.have.length(2);
+        expect(options.include[0]).to.deep.equal({ model: User, where: { something: true }});
+        expect(options.include[1]).to.deep.equal({ all: true });
+      });
+
+
+      it('options with all', function () {
+        var scope = {
+          include: [
+            { model: User, where: { something: true }}
+          ]
+        };
+
+        var options = {
+          include: [
+            { all: true }
+          ]
+        };
+
+        current.Model.$injectScope(scope, options);
+
+        expect(options.include).to.have.length(2);
+        expect(options.include[0]).to.deep.equal({ all: true });
+        expect(options.include[1]).to.deep.equal({ model: User, where: { something: true }});
+      });
     });
   });
 });
