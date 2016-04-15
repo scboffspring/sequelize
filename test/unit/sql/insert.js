@@ -28,12 +28,36 @@ describe(Support.getTestDialectTeaser('SQL'), function() {
       };
       expectsql(sql.insertQuery(User.tableName,{user_name: 'triggertest'},User.rawAttributes,options),
       {
-        mssql:'declare @tmp table ([id] INTEGER,[user_name] NVARCHAR(255));INSERT INTO [users] ([user_name]) OUTPUT INSERTED.[id],INSERTED.[user_name] into @tmp VALUES (\'triggertest\');select * from @tmp;',
+        mssql:'declare @tmp table ([id] INTEGER,[user_name] NVARCHAR(255));INSERT INTO [users] ([user_name]) OUTPUT INSERTED.[id],INSERTED.[user_name] into @tmp VALUES (N\'triggertest\');select * from @tmp;',
         postgres: 'INSERT INTO "users" ("user_name") VALUES (\'triggertest\') RETURNING *;',
         default: "INSERT INTO `users` (`user_name`) VALUES ('triggertest');",
       });
     });
 
+  });
+
+  describe('dates', function () {
+    it('formats the date correctly when inserting', function () {
+      var timezoneSequelize = Support.createSequelizeInstance({
+        timezone: Support.getTestDialect() === 'sqlite' ? '+00:00' : 'CET'
+      });
+
+      var User = timezoneSequelize.define('user', {
+        date: {
+          type: DataTypes.DATE
+        }
+      },{
+        timestamps:false
+      });
+
+      expectsql(timezoneSequelize.dialect.QueryGenerator.insertQuery(User.tableName, {date: new Date(Date.UTC(2015, 0, 20))}, User.rawAttributes, {}),
+        {
+          postgres: 'INSERT INTO "users" ("date") VALUES (\'2015-01-20 01:00:00.000 +01:00\');',
+          sqlite: 'INSERT INTO `users` (`date`) VALUES (\'2015-01-20 00:00:00.000 +00:00\');',
+          mssql: 'INSERT INTO [users] ([date]) VALUES (N\'2015-01-20 01:00:00.000\');',
+          mysql: "INSERT INTO `users` (`date`) VALUES ('2015-01-20 01:00:00');"
+        });
+    });
   });
 
   describe('bulkCreate', function () {

@@ -4,6 +4,7 @@
 var chai = require('chai')
   , expect = chai.expect
   , Support   = require(__dirname + '/../support')
+  , DataTypes = require(__dirname + '/../../../lib/data-types')
   , current   = Support.sequelize;
 
 describe(Support.getTestDialectTeaser('Model'), function() {
@@ -70,6 +71,50 @@ describe(Support.getTestDialectTeaser('Model'), function() {
   });
 
   describe('.scope', function () {
+    describe('attribute exclude / include', function () {
+      var User = current.define('user', {
+        password: DataTypes.STRING,
+        name: DataTypes.STRING
+      }, {
+        defaultScope: {
+          attributes: {
+            exclude: ['password']
+          }
+        },
+        scopes: {
+          aScope: {
+            attributes: {
+              exclude: ['password']
+            }
+          }
+        }
+      });
+
+      it('should be able to exclude in defaultScope #4735', function () {
+        expect(User.$scope.attributes).to.deep.equal([
+          'id',
+          'name',
+          'createdAt',
+          'updatedAt'
+        ]);
+      });
+
+      it('should be able to exclude in a scope #4925', function () {
+        expect(User.scope('aScope').$scope.attributes).to.deep.equal([
+          'id',
+          'name',
+          'createdAt',
+          'updatedAt'
+        ]);
+      });
+    });
+
+    it('defaultScope should be an empty object if not overridden', function () {
+      var Foo = current.define('foo', {}, {});
+
+      expect(Foo.scope('defaultScope').$scope).to.deep.equal({});
+    });
+
     it('should apply default scope', function () {
       expect(Company.$scope).to.deep.equal({
         include: [{ model: Project }],
@@ -253,7 +298,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
         limit: 9
       };
 
-      current.Model.$injectScope(scope, options);
+      current.Model.prototype.$injectScope.call({
+        $scope: scope
+      }, options);
 
       expect(options).to.deep.equal({
         where: {
@@ -275,7 +322,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
 
       var options = {};
 
-      current.Model.$injectScope(scope, options);
+      current.Model.prototype.$injectScope.call({
+        $scope: scope
+      }, options);
 
       expect(options.include).to.have.length(1);
       expect(options.include[0]).to.deep.equal({ model: Project, where: { something: true }});
@@ -290,7 +339,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
         include: [{ model: Project, where: { something: true }}]
       };
 
-      current.Model.$injectScope(scope, options);
+      current.Model.prototype.$injectScope.call({
+        $scope: scope
+      }, options);
 
       expect(options.include).to.have.length(1);
       expect(options.include[0]).to.deep.equal({ model: Project, where: { something: true }});
@@ -305,7 +356,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
         include: [{model: User, as: 'otherUser'}]
       };
 
-      current.Model.$injectScope(scope, options);
+      current.Model.prototype.$injectScope.call({
+        $scope: scope
+      }, options);
 
       expect(options.include).to.have.length(2);
       expect(options.include[0]).to.deep.equal({model: User, as: 'otherUser'});
@@ -325,7 +378,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
         ]
       };
 
-      current.Model.$injectScope(scope, options);
+      current.Model.prototype.$injectScope.call({
+        $scope: scope
+      }, options);
 
       expect(options.include).to.have.length(2);
       expect(options.include[0]).to.deep.equal({ model: User, where: { something: true }});
@@ -346,7 +401,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
           ]
         };
 
-        current.Model.$injectScope(scope, options);
+        current.Model.prototype.$injectScope.call({
+          $scope: scope
+        }, options);
 
         expect(options.include).to.have.length(2);
         expect(options.include[0]).to.deep.equal({ model: User, where: { something: true }});
@@ -367,7 +424,9 @@ describe(Support.getTestDialectTeaser('Model'), function() {
           ]
         };
 
-        current.Model.$injectScope(scope, options);
+        current.Model.prototype.$injectScope.call({
+          $scope: scope
+        }, options);
 
         expect(options.include).to.have.length(2);
         expect(options.include[0]).to.deep.equal({ all: true });
